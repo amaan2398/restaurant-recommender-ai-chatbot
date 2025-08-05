@@ -1,0 +1,38 @@
+{
+    // Use the virtual environment for Python
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    // -------------------
+    // Formatter: Black
+    // -------------------
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "black-formatter.args": [
+        "--config",
+        "pyproject.toml"
+    ],
+    // -------------------
+    // Import sorter: isort
+    // -------------------
+    "isort.args": [
+        "--settings-path",
+        "pyproject.toml"
+    ],
+    // -------------------
+    // Linter: Flake8
+    // -------------------
+    "python.linting.enabled": true,
+    "python.linting.ruffEnabled": true,
+    // -------------------
+    // Editor behavior
+    // -------------------
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/.mypy_cache": true
+    }
+}

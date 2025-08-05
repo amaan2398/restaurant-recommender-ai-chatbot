@@ -20,6 +20,9 @@ restaurant-recommender-chatbot/
 ├── requirements.txt
 ├── .env
 ├── README.md
+├── .gitignore
+├── .pre-commit-config.yaml
+├── pyproject.toml
 ├── data/
 │   └── (optional data files)
 ├── src/
