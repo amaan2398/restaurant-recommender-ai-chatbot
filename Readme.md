@@ -11,6 +11,28 @@ A conversational AI chatbot that recommends restaurants based on user preference
 - Modern, user-friendly UI built with Streamlit
 - Easy-to-use chat interface
 
+## Folder Structure
+
+```
+restaurant-recommender-chatbot/
+├── app.py
+├── config.py
+├── requirements.txt
+├── .env
+├── README.md
+├── data/
+│   └── (optional data files)
+├── src/
+│   ├── ai/
+│   │   ├── gemini_api.py
+│   │   └── chatgpt_api.py
+│   ├── yelp/
+│   │   └── yelp_api.py
+│   └── utils.py
+└── assets/
+    └── (images, logos, etc.)
+```
+
 ## Getting Started
 
 ### Prerequisites
