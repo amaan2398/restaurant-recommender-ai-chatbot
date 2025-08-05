@@ -1,0 +1,9 @@
+[tool.black]
+line-length = 150
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+ignore = ["E501", "W503"]
