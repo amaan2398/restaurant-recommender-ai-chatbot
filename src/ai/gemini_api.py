@@ -1,41 +1,76 @@
-"""
-# Gemini API Client
-# This module provides a client for interacting with the Gemini API to get recommendations.
-# It allows you to send prompts and receive recommendations based on those prompts.
-"""
-
+import json
 import os
+import re
 
-import requests
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
+from langchain.prompts import FewShotPromptTemplate, PromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 
-class GeminiAPI:
+class InfoExtractionChatBot:
     """
-    A client for the Gemini API to fetch recommendations based on user prompts.
+    Extracts cuisine, location, and price from user prompt using few-shot learning.
+    Returns dict with keys: cuisine, location, price
     """
 
-    def __init__(self, api_key=None, base_url=None):
-        """Initialize the GeminiAPI client."""
-        self.api_key = api_key or os.getenv("API_KEY")
-        self.base_url = base_url or "https://api.gemini.com/v1"
+    def __init__(self, api_key=None, model_name="gemini-1.5-flash"):
+        self.llm_api_key = api_key or os.getenv("GOOGLE_API_KEY")
+        self.llm = ChatGoogleGenerativeAI(
+            model=model_name,
+            google_api_key=self.llm_api_key,
+            temperature=0,
+        )
 
-    def get_recommendations(self, prompt, max_tokens=128):
-        """Fetch recommendations from the Gemini API based on a user prompt."""
-        url = f"{self.base_url}/recommend"
-        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-        payload = {"prompt": prompt, "max_tokens": max_tokens}
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        # --- Define JSON schema for output ---
+        response_schemas = [
+            ResponseSchema(name="cuisine", description="Type of cuisine"),
+            ResponseSchema(name="location", description="City or location"),
+            ResponseSchema(name="price", description="Price category (cheap, moderate, expensive)"),
+        ]
+        self.output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
 
-        # Check for errors in the response
-        if response.status_code != 200:
-            raise Exception(
-                f"Error fetching recommendations: {response.status_code} - {response.text}"  # error handling
-            )
-        response.raise_for_status()
-        return response.json()
+        # --- Few-shot examples ---
+        examples = [
+            {
+                "user_prompt": "Find me a cheap sushi place in San Francisco",
+                "output": '{{"cuisine": "sushi", "location": "San Francisco", "price": "cheap", "limit": 5}}',
+            },
+            {
+                "user_prompt": "I want Italian food in New York, not too expensive (3 restaurants)",
+                "output": '{{"cuisine": "Italian", "location": "New York", "price": "moderate", "limit": 3}}',
+            },
+            {
+                "user_prompt": "Recommend a fancy French restaurant in Paris for a special occasion (2 restaurants)",
+                "output": '{{"cuisine": "French", "location": "Paris", "price": "expensive", "limit": 2}}',
+            },
+            {
+                "user_prompt": "Recommend a desi indian restaurant in Paris 4 restaurants",
+                "output": '{{"cuisine": "Indian", "location": "Paris", "price": "very expensive", "limit": 4}}',
+            },
+        ]
 
+        example_prompt = PromptTemplate(
+            input_variables=["user_prompt", "output"],
+            template="User: {user_prompt}\nExtracted: {output}",
+        )
 
-# Example usage:
-# gemini = GeminiAPI(api_key="your_api_key_here")
-# result = gemini.get_recommendations("Suggest a movie for tonight")
-# print(result)
+        self.prompt = FewShotPromptTemplate(
+            examples=examples,
+            example_prompt=example_prompt,
+            prefix=(
+                "Extract cuisine, location, suggestion count(limit) and price from the user prompt. "
+                "Respond only with JSON in the following format:\n"
+                '{{"cuisine": "###", "location": "###", "price": "###", "limit": "###"}}\n'
+            ),
+            suffix="User: {user_prompt}\nExtracted:",
+            input_variables=["user_prompt"],
+        )
+
+        # --- Chain with enforced JSON output ---
+        self.chain = self.prompt | self.llm | self.output_parser
+
+    def get_info_from_prompt(self, user_prompt: str):
+        """
+        Get structured info from user prompt.
+        """
+        return self.chain.invoke({"user_prompt": user_prompt})
